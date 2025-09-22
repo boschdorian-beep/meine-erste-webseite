@@ -1,0 +1,60 @@
+body { font-family: 'Inter', sans-serif; }
+.card { background-color: #1f2937; border: 1px solid #374151; }
+.slider-thumb::-webkit-slider-thumb { background: #4f46e5; height: 20px; width: 20px; border-radius: 50%; appearance: none; -webkit-appearance: none; margin-top: -8px;}
+.slider-thumb:disabled { background: #4b5563; }
+.slider-thumb::-moz-range-thumb { background: #4f46e5; height: 20px; width: 20px; border-radius: 50%; }
+.positive { color: #4ade80; }
+.negative { color: #f87171; }
+.neutral { color: #9ca3af; }
+.file-upload-label { border: 2px dashed #4b5563; }
+.file-upload-label:hover { border-color: #6366f1; }
+select, input[type="number"], input[type="text"] { background-color: #374151; border-color: #4b5563; }
+.results-table th { padding: 8px 12px; text-align: left; border-bottom: 2px solid #4b5563; cursor: pointer; user-select: none; }
+.results-table th:hover { background-color: #374151; }
+.results-table td { padding: 8px 12px; text-align: left; border-bottom: 1px solid #374151; }
+.results-table tbody tr { transition: background-color: 0.2s; }
+.results-table tbody tr:hover { background-color: #374151; cursor: pointer; }
+.results-table tbody tr.selected { background-color: #4338ca; }
+.lock-btn { background: none; border: none; cursor: pointer; color: #6b7280; transition: color 0.2s; }
+.lock-btn.locked { color: #a78bfa; }
+.constraint-tag {
+    background-color: #374151;
+    padding: 2px 8px;
+    border-radius: 12px;
+    font-size: 0.7rem;
+    display: inline-flex;
+    align-items: center;
+    margin-right: 4px;
+    margin-bottom: 4px;
+}
+.constraint-remove-btn {
+    margin-left: 6px;
+    background: none;
+    border: none;
+    color: #9ca3af;
+    cursor: pointer;
+    font-weight: bold;
+}
+.constraint-remove-btn:hover { color: #ef4444; }
+/* Modal Styles */
+.modal-overlay {
+    position: fixed;
+    top: 0; left: 0; right: 0; bottom: 0;
+    background-color: rgba(0, 0, 0, 0.7);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    z-index: 50;
+}
+.modal-content {
+    background-color: #1f2937;
+    padding: 2rem;
+    border-radius: 1rem;
+    width: 90%;
+    max-width: 1400px;
+    max-height: 90vh;
+    overflow-y: auto;
+    border: 1px solid #374151;
+}
+details > summary { cursor: pointer; }
+.trade-log-table tbody tr { cursor: pointer; }
