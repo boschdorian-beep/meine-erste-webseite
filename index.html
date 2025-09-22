@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Intelligenter Strategie-Optimierer (v14 - Final)</title>
+    <title>Intelligenter Strategie-Optimierer (v15 - Manuelle Sim Fixed)</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/chartjs-adapter-date-fns"></script>
@@ -915,18 +915,14 @@
         }
 
         self.onmessage = function(e) {
-            const { type, settings } = e.data;
-            if (type === 'init') {
-                featureData = e.data.features;
+            const { type, settings, features } = e.data;
+             if (type === 'init') {
+                featureData = features;
                 return;
             }
             if (type === 'run' && featureData) {
                 const fullResult = runHeadlessSimulation(settings, featureData);
-                if (fullResult && fullResult.kpis && fullResult.kpis.tradeCount >= 1) {
-                    self.postMessage({ settings: settings, fullResult: fullResult });
-                } else {
-                    self.postMessage({ settings: settings, fullResult: null });
-                }
+                 self.postMessage({ settings: settings, fullResult: fullResult });
             }
         };
     `;
@@ -1589,14 +1585,119 @@
     }
 
     // --- MANUELLE SIMULATION / ROBUSTNESS ---
+    function getSettingsFromUI() {
+        const settings = {};
+        document.querySelectorAll('#parameter-container input[type="range"]').forEach(slider => {
+            settings[slider.name] = parseFloat(slider.value);
+        });
+        settings.strategy = ui.strategyLogicSelect.value;
+        settings.factors = [];
+        document.querySelectorAll('#factor-container .factor-row').forEach(row => {
+            settings.factors.push({
+                key: row.querySelector('.factor-select').value,
+                weight: parseInt(row.querySelector('.factor-weight').value)
+            });
+        });
+        settings.ratioWeights = getCurrentRatioWeights();
+        // Manual simulation does not use the dynamic filter
+        settings.filterEnabled = false; 
+        return settings;
+    }
+
+    function runSingleSimulation(settings, features, callback) {
+        const workerBlob = new Blob([workerCode], { type: 'application/javascript' });
+        const workerUrl = URL.createObjectURL(workerBlob);
+        const singleWorker = new Worker(workerUrl);
+
+        const serializableFeatures = features.map(f => ({ ...f, date: f.date.getTime() }));
+        
+        singleWorker.onmessage = (e) => {
+            const { fullResult } = e.data;
+            if (fullResult) {
+                fullResult.performanceData.forEach(d => d.date = new Date(d.date));
+                 fullResult.completedTradeLog.forEach(t => {
+                    t.buyDate = new Date(t.buyDate);
+                    t.sellDate = new Date(t.sellDate);
+                });
+            }
+            callback(fullResult);
+            singleWorker.terminate();
+        };
+
+        singleWorker.onerror = (error) => {
+            console.error("Fehler im manuellen Worker:", error.message);
+            callback(null);
+            singleWorker.terminate();
+        };
+        
+        singleWorker.postMessage({ type: 'init', features: serializableFeatures });
+        singleWorker.postMessage({ type: 'run', settings: settings, features: serializableFeatures });
+    }
+
     function startManualSimulation() {
         if (appState !== 'IDLE') return;
-        alert("Manuelle Simulation muss noch für die Worker-Architektur angepasst werden.");
+        const trainingFile = ui.trainingDataSelect.value;
+        const dataset = allDatasets[trainingFile];
+        if (!dataset || !dataset.features) return;
+
+        const { processedFeatures } = finalizeFeatures(dataset.features, true);
+        dataset.rankedFeatures = processedFeatures;
+
+        const settings = getSettingsFromUI();
+        ui.analysisTitle.textContent = `Analyse für: Manuelle Simulation (${trainingFile})`;
+
+        runSingleSimulation(settings, dataset.rankedFeatures, (result) => {
+            if (result) {
+                displayResultDetails(result.kpis, result.performanceData, trainingFile);
+            } else {
+                alert("Die manuelle Simulation ergab keine Trades mit den aktuellen Einstellungen.");
+            }
+        });
     }
     
-    function runRobustnessCheck() {
+    async function runRobustnessCheck() {
          if (appState !== 'IDLE') return;
-        alert("Robustheits-Check muss noch für die Worker-Architektur angepasst werden.");
+        
+        const trainingFile = ui.trainingDataSelect.value;
+        const trainingDataset = allDatasets[trainingFile];
+        if (!trainingDataset || !trainingDataset.features) {
+            alert("Trainingsdaten nicht gefunden.");
+            return;
+        }
+
+        const { processedFeatures: rankedTrainingFeatures, bins: trainingBins } = finalizeFeatures(trainingDataset.features, true);
+        const settings = getSettingsFromUI();
+        ui.robustnessResults.innerHTML = '<tr><td colspan="3">Prüfung läuft...</td></tr>';
+        
+        const testFiles = Object.keys(allDatasets).filter(name => name !== trainingFile);
+        const results = [];
+
+        for (const testFile of testFiles) {
+            const testDataset = allDatasets[testFile];
+            prepareAllData(testFile);
+            
+            const { processedFeatures: rankedTestFeatures } = finalizeFeatures(testDataset.features, false, trainingBins);
+            
+            const promise = new Promise(resolve => {
+                runSingleSimulation(settings, rankedTestFeatures, (result) => {
+                    results.push({
+                        name: testFile,
+                        avgReturn: result ? result.kpis.avgTradeReturn : 0,
+                        trades: result ? result.kpis.tradeCount : 0
+                    });
+                    resolve();
+                });
+            });
+            await promise;
+        }
+
+        ui.robustnessResults.innerHTML = '';
+        results.forEach(res => {
+            const row = document.createElement('tr');
+            const avgReturnClass = res.avgReturn > 0 ? 'positive' : (res.avgReturn < 0 ? 'negative' : 'neutral');
+            row.innerHTML = `<td>${res.name.substring(0, 15)}...</td><td class="${avgReturnClass}">${res.avgReturn.toFixed(3)}%</td><td>${res.trades}</td>`;
+            ui.robustnessResults.appendChild(row);
+        });
     }
     
     
