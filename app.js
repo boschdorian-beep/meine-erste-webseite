@@ -1801,6 +1801,3 @@ document.addEventListener('DOMContentLoaded', () => {
     updateSortHeaders();
 });
 
-</script>
-</body>
-</html>
