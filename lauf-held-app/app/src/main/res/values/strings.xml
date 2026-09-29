@@ -1,0 +1,5 @@
+<resources>
+    <string name="app_name">Lauf-Held</string>
+    <string name="no_permission">Ohne Standort-Erlaubnis weiß die App nicht, wo und wie schnell du läufst.\nBitte in den Einstellungen erlauben.</string>
+    <string name="no_maps_key">Karte aus: Kein Google-Maps-Schlüssel eingetragen.\nDas Spiel unten funktioniert trotzdem.\nWie du den Schlüssel einträgst, steht in der README.</string>
+</resources>
