@@ -1,0 +1,36 @@
+name: Lauf-Held APK bauen
+
+on:
+  push:
+    paths:
+      - "lauf-held-app/**"
+      - ".github/workflows/lauf-held-apk.yml"
+  workflow_dispatch:
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: lauf-held-app
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: "17"
+
+      - uses: gradle/actions/setup-gradle@v4
+
+      - name: APK bauen
+        env:
+          # Im Repository unter Settings → Secrets and variables → Actions als MAPS_API_KEY eintragen
+          MAPS_API_KEY: ${{ secrets.MAPS_API_KEY }}
+        run: ./gradlew assembleDebug --stacktrace
+
+      - name: APK hochladen
+        uses: actions/upload-artifact@v4
+        with:
+          name: lauf-held-apk
+          path: lauf-held-app/app/build/outputs/apk/debug/app-debug.apk
